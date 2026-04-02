@@ -21,6 +21,15 @@ namespace
         ProgramPtr program;
         std::unique_ptr<Context> context;
         Func tickFunction;
+        Func saveTickCountFunction;
+        Func saveAccumulatorFunction;
+        Func restoreStateFunction;
+    };
+
+    struct ScriptSnapshot
+    {
+        int32_t localTickCount = 0;
+        float accumulator = 0.0f;
     };
 
     std::string normalize_path(std::string path)
@@ -86,8 +95,49 @@ namespace
         runtime.program = program;
         runtime.context = std::move(context);
         runtime.tickFunction = Func(tickFn);
+        runtime.saveTickCountFunction = Func(runtime.context->findFunction("save_state_tick_count"));
+        runtime.saveAccumulatorFunction = Func(runtime.context->findFunction("save_state_accumulator"));
+        runtime.restoreStateFunction = Func(runtime.context->findFunction("restore_state"));
         errorMessage.clear();
         return true;
+    }
+
+    std::optional<ScriptSnapshot> capture_snapshot(ScriptRuntime& runtime)
+    {
+        if (!runtime.saveTickCountFunction || !runtime.saveAccumulatorFunction)
+        {
+            return std::nullopt;
+        }
+
+        ScriptSnapshot snapshot;
+        snapshot.localTickCount = das_invoke_function<int32_t>::invoke(
+            runtime.context.get(),
+            nullptr,
+            runtime.saveTickCountFunction
+        );
+        snapshot.accumulator = das_invoke_function<float>::invoke(
+            runtime.context.get(),
+            nullptr,
+            runtime.saveAccumulatorFunction
+        );
+        return snapshot;
+    }
+
+    bool restore_snapshot(ScriptRuntime& runtime, const ScriptSnapshot& snapshot)
+    {
+        if (!runtime.restoreStateFunction)
+        {
+            return false;
+        }
+
+        das_invoke_function<void>::invoke(
+            runtime.context.get(),
+            nullptr,
+            runtime.restoreStateFunction,
+            snapshot.localTickCount,
+            snapshot.accumulator
+        );
+        return runtime.context->getException() == nullptr;
     }
 
     fs::file_time_type safe_last_write_time(const fs::path& path)
@@ -164,9 +214,32 @@ int main(int argc, char* argv[])
         {
             ScriptRuntime reloadedRuntime;
             std::string reloadError;
+            auto snapshot = capture_snapshot(runtime);
             std::cout << "[host] change detected, recompiling script...\n";
             if (load_script(scriptPath, reloadedRuntime, reloadError))
             {
+                if (snapshot)
+                {
+                    if (restore_snapshot(reloadedRuntime, *snapshot))
+                    {
+                        std::cout << "[host] restored script state (local_tick_count="
+                                  << snapshot->localTickCount
+                                  << ", accumulator="
+                                  << snapshot->accumulator
+                                  << ")\n";
+                    }
+                    else
+                    {
+                        const auto restoreError = reloadedRuntime.context->getException();
+                        std::cerr << "[host] state restore failed";
+                        if (restoreError)
+                        {
+                            std::cerr << ": " << restoreError;
+                        }
+                        std::cerr << "\n";
+                        reloadedRuntime.context->restart();
+                    }
+                }
                 runtime = std::move(reloadedRuntime);
                 observedWriteTime = latestWriteTime;
                 ++reloadCount;
