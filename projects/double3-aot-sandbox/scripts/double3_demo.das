@@ -1,6 +1,6 @@
 options gen2
 
-require double3_demo
+require double3_bindings
 
 [export]
 def run_entry(work_iters : int) : Double3 {
