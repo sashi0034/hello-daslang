@@ -1,18 +1,30 @@
 # hello-daslang
 
-This repository shares `vendor/daScript` and can host multiple projects under `projects/`.
+This repository hosts daScript embedding samples under `projects/`.
 
-The current project migrated from the old top-level `src` layout is `projects/hot-rload-sandbox`.
+## 0) Fetch daScript (required)
+```bash
+git clone --depth 1 https://github.com/GaijinEntertainment/daScript.git vendor/daScript
+```
+
+## Projects
+- `projects/hot-rload-sandbox`: hot-reload sandbox for interpreter loop.
+- `projects/double3-aot-sandbox`: C++ `Double3` binding + interpreter/AOT benchmark.
 
 ## Build
-```powershell
+```bash
 cmake -S . -B build
-cmake --build build --config Release
+cmake --build build --config Release --target double3_aot_sandbox
 ```
 
-## Run
-```powershell
-.\build\projects\hot-rload-sandbox\Release\hot_rload_sandbox.exe
+## Run (interpreter then AOT, with timing)
+```bash
+# args: <iterations_per_round> <rounds>
+./build/projects/double3-aot-sandbox/double3_aot_sandbox 300000 3
 ```
 
-If you use a single-config generator, run `.\build\projects\hot-rload-sandbox\hot_rload_sandbox.exe`.
+The executable runs:
+1. interpreter mode (`policies.aot = false`)
+2. AOT-enabled mode (`policies.aot = true`, `fail_on_no_aot = false`)
+
+and prints each mode's average elapsed time and speedup.
