@@ -28,6 +28,13 @@ target_link_libraries(double3_aot_tool PRIVATE
 
 target_compile_features(double3_aot_tool PRIVATE cxx_std_17)
 
+add_custom_command(TARGET double3_aot_tool POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:libDaScriptDyn>
+        $<TARGET_FILE_DIR:double3_aot_tool>
+    COMMENT "Copying libDaScriptDyn.dll next to double3_aot_tool"
+)
+
 add_custom_command(
     OUTPUT "${DOUBLE3_AOT_OUTPUT}"
     DEPENDS
