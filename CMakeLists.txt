@@ -34,6 +34,8 @@ set(DAS_AOT_EXAMPLES_DISABLED OFF CACHE BOOL "" FORCE)
 set(DAS_TUTORIAL_DISABLED ON CACHE BOOL "" FORCE)
 set(DAS_TESTS_DISABLED ON CACHE BOOL "" FORCE)
 
+file(MAKE_DIRECTORY "${HELLO_DASLANG_DAS_ROOT}/daslib/_aot_generated")
+
 add_subdirectory("${HELLO_DASLANG_DAS_ROOT}" "${CMAKE_BINARY_DIR}/vendor/daScript")
 add_subdirectory(projects/hot-rload-sandbox)
 add_subdirectory(projects/double3-aot-sandbox)

@@ -19,12 +19,15 @@ cmake --build build --config Release --target double3_aot_sandbox
 
 ## Run (interpreter then AOT, with timing)
 ```bash
-# args: <iterations_per_round> <rounds>
-./build/projects/double3-aot-sandbox/double3_aot_sandbox 300000 3
+# args: <iterations_per_round> <rounds> <strict_aot:0|1>
+./build/projects/double3-aot-sandbox/double3_aot_sandbox 300000 3 0
 ```
 
 The executable runs:
 1. interpreter mode (`policies.aot = false`)
-2. AOT-enabled mode (`policies.aot = true`, `fail_on_no_aot = false`)
+2. AOT-enabled mode (`policies.aot = true`)
+
+If you pass `strict_aot=1`, the executable enforces `fail_on_no_aot=true` for AOT runs,
+so it fails instead of silently falling back to interpreter.
 
 and prints each mode's average elapsed time and speedup.

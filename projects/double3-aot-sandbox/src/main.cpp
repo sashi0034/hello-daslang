@@ -149,14 +149,26 @@ int parse_int_arg(int argc, char* argv[], int index, int fallback) {
     }
 }
 
-RunStats run_once(const std::string& scriptPath, int iterations, bool useAot) {
+bool parse_bool_arg(int argc, char* argv[], int index, bool fallback) {
+    if (argc <= index) {
+        return fallback;
+    }
+    try {
+        return std::stoi(argv[index]) != 0;
+    } catch (...) {
+        return fallback;
+    }
+}
+
+
+RunStats run_once(const std::string& scriptPath, int iterations, bool useAot, bool strictAot) {
     TextPrinter tout;
     ModuleGroup moduleGroup;
     auto fileAccess = make_smart<FsFileAccess>();
 
     CodeOfPolicies policies;
     policies.aot = useAot;
-    policies.fail_on_no_aot = false;
+    policies.fail_on_no_aot = useAot && strictAot;
 
     auto program = compileDaScript(scriptPath, fileAccess, tout, moduleGroup, policies);
     if (program->failed()) {
@@ -200,6 +212,7 @@ int main(int argc, char* argv[]) {
 
     const auto iterations = parse_int_arg(argc, argv, 1, 300000);
     const auto rounds = parse_int_arg(argc, argv, 2, 3);
+    const bool strictAot = parse_bool_arg(argc, argv, 3, false);
 
     const auto projectRoot = normalize_path(HELLO_DASLANG_PROJECT_ROOT);
     const auto dasRoot = normalize_path(HELLO_DASLANG_DAS_ROOT);
@@ -215,7 +228,8 @@ int main(int argc, char* argv[]) {
     auto shutdown = das_finally([]() { Module::Shutdown(); });
 
     std::cout << "[host] script=" << scriptPath << "\n";
-    std::cout << "[host] iterations=" << iterations << ", rounds=" << rounds << "\n";
+    std::cout << "[host] iterations=" << iterations << ", rounds=" << rounds
+              << ", strict_aot=" << (strictAot ? "true" : "false") << "\n";
 
     try {
         long long interpTotal = 0;
@@ -223,7 +237,7 @@ int main(int argc, char* argv[]) {
 
         std::cout << "\n=== Interpreter runs ===\n";
         for (int i = 0; i < rounds; ++i) {
-            const auto stats = run_once(scriptPath, iterations, false);
+            const auto stats = run_once(scriptPath, iterations, false, strictAot);
             interpTotal += stats.elapsedMs;
             std::cout << "[interpreter] round=" << i + 1 << " elapsed_ms=" << stats.elapsedMs << "\n";
             print_double3_from_cpp(stats.value);
@@ -231,7 +245,7 @@ int main(int argc, char* argv[]) {
 
         std::cout << "\n=== AOT runs ===\n";
         for (int i = 0; i < rounds; ++i) {
-            const auto stats = run_once(scriptPath, iterations, true);
+            const auto stats = run_once(scriptPath, iterations, true, strictAot);
             aotTotal += stats.elapsedMs;
             std::cout << "[aot] round=" << i + 1 << " elapsed_ms=" << stats.elapsedMs << "\n";
             print_double3_from_cpp(stats.value);
