@@ -14,8 +14,12 @@ Double2::Double2() : x(0.0), y(0.0) {
 Double2::Double2(double xValue, double yValue) : x(xValue), y(yValue) {
 }
 
-Double2 Double2::add(const Double2& rhs) const {
+Double2 Double2::operator+(const Double2& rhs) const {
     return Double2{x + rhs.x, y + rhs.y};
+}
+
+Double2 Double2::add(const Double2& rhs) const {
+    return *this + rhs;
 }
 
 Double2 Double2::scale(double factor) const {
@@ -33,8 +37,12 @@ Double3::Double3(double xValue, double yValue, double zValue)
     : x(xValue), y(yValue), z(zValue) {
 }
 
-Double3 Double3::add(const Double3& rhs) const {
+Double3 Double3::operator+(const Double3& rhs) const {
     return Double3{x + rhs.x, y + rhs.y, z + rhs.z};
+}
+
+Double3 Double3::add(const Double3& rhs) const {
+    return *this + rhs;
 }
 
 Double3 Double3::scale(double factor) const {
@@ -57,13 +65,27 @@ void print_double3_from_cpp(const Double3& v) {
     v.print();
 }
 
+Double2 double2_add_op(const Double2& lhs, const Double2& rhs) {
+    return lhs + rhs;
+}
+
+Double2 double2_scale_op(const Double2& value, double factor) {
+    return value.scale(factor);
+}
+
+Double3 double3_add_op(const Double3& lhs, const Double3& rhs) {
+    return lhs + rhs;
+}
+
+Double3 double3_scale_op(const Double3& value, double factor) {
+    return value.scale(factor);
+}
+
 namespace das {
 
-using double2_add_method = DAS_CALL_MEMBER(Double2::add);
 using double2_scale_method = DAS_CALL_MEMBER(Double2::scale);
 using double2_to_double3_method = DAS_CALL_MEMBER(Double2::toDouble3);
 using double2_print_method = DAS_CALL_MEMBER(Double2::print);
-using double3_add_method = DAS_CALL_MEMBER(Double3::add);
 using double3_scale_method = DAS_CALL_MEMBER(Double3::scale);
 using double3_transform_method = DAS_CALL_MEMBER(Double3::transform);
 using double3_print_method = DAS_CALL_MEMBER(Double3::print);
@@ -121,14 +143,14 @@ public:
         addCtorAndUsing<Double3>(*this, lib, "Double3", "Double3");
         addCtorAndUsing<Double3, double, double, double>(*this, lib, "Double3", "Double3");
 
-        addExtern<DAS_CALL_METHOD(double2_add_method), SimNode_ExtFuncCallAndCopyOrMove>(
+        addExtern<DAS_BIND_FUN(double2_add_op), SimNode_ExtFuncCallAndCopyOrMove>(
             *this,
             lib,
-            "add",
+            "+",
             SideEffects::none,
-            DAS_CALL_MEMBER_CPP(Double2::add)
+            "double2_add_op"
         )
-            ->args({"self", "rhs"});
+            ->args({"lhs", "rhs"});
 
         addExtern<DAS_CALL_METHOD(double2_scale_method), SimNode_ExtFuncCallAndCopyOrMove>(
             *this,
@@ -157,14 +179,14 @@ public:
         )
             ->args({"self"});
 
-        addExtern<DAS_CALL_METHOD(double3_add_method), SimNode_ExtFuncCallAndCopyOrMove>(
+        addExtern<DAS_BIND_FUN(double3_add_op), SimNode_ExtFuncCallAndCopyOrMove>(
             *this,
             lib,
-            "add",
+            "+",
             SideEffects::none,
-            DAS_CALL_MEMBER_CPP(Double3::add)
+            "double3_add_op"
         )
-            ->args({"self", "rhs"});
+            ->args({"lhs", "rhs"});
 
         addExtern<DAS_CALL_METHOD(double3_scale_method), SimNode_ExtFuncCallAndCopyOrMove>(
             *this,
